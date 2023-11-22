@@ -110,15 +110,8 @@ func (a Answer) AsBytes() []byte {
 	for i := 24; i >= 0; i -= 8 {
 		res = append(res, byte((a.TTL>>i)&0xff))
 	}
-	revLengthBytes := make([]byte, 0, 2)
-	l := a.RDLength
-	for l > 0 {
-		revLengthBytes = append(revLengthBytes, byte(l&0xff))
-		l >>= 8
-	}
-	for i := len(revLengthBytes) - 1; i >= 0; i-- {
-		res = append(res, revLengthBytes[i])
-	}
+	res = append(res, byte(a.RDLength>>8))
+	res = append(res, byte(a.RDLength&0xff))
 	res = append(res, a.RDData...)
 	return res
 }
