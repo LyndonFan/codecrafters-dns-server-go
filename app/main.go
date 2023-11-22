@@ -194,8 +194,3 @@ func main() {
 		}
 	}
 }
-
-func calculateHeaders(questionLength int) []byte {
-
-	return header.AsBytes()
-}
