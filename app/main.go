@@ -168,7 +168,7 @@ func main() {
 			Name:     "codecrafters.io",
 			Type:     1,
 			Class:    1,
-			TTL:      3600,
+			TTL:      60,
 			RDLength: 4,
 			RDData:   []byte{0x08, 0x08, 0x08, 0x08},
 		})
