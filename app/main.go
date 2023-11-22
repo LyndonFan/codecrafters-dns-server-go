@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	// Uncomment this block to pass the first stage
 	"net"
 )
@@ -62,6 +64,26 @@ func (h Header) AsBytes() []byte {
 	return res
 }
 
+type Question struct {
+	Name  string
+	Type  uint16
+	Class uint16
+}
+
+func (q Question) AsBytes() []byte {
+	res := make([]byte, 0, 4)
+	labels := strings.Split(q.Name, ".")
+	for _, label := range labels {
+		res = append(res, byte(len(label)))
+		res = append(res, []byte(label)...)
+	}
+	res = append(res, byte(q.Type>>8))
+	res = append(res, byte(q.Type&0xff))
+	res = append(res, byte(q.Class>>8))
+	res = append(res, byte(q.Class&0xff))
+	return res
+}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -95,8 +117,18 @@ func main() {
 
 		// Create an empty response
 		response := []byte{}
-		header := calculateHeaders()
+		questions := []Question{}
+		questions = append(questions, Question{
+			Name:  "codecrafters.io",
+			Type:  1,
+			Class: 1,
+		})
+		header := calculateHeaders(len(questions))
+
 		response = append(response, header...)
+		for _, question := range questions {
+			response = append(response, question.AsBytes()...)
+		}
 
 		_, err = udpConn.WriteToUDP(response, source)
 		if err != nil {
@@ -105,10 +137,11 @@ func main() {
 	}
 }
 
-func calculateHeaders() []byte {
+func calculateHeaders(questionLength int) []byte {
 	header := Header{
-		Identifier: 1234,
-		QR:         true,
+		Identifier:    1234,
+		QR:            true,
+		QuestionCount: uint16(questionLength),
 	}
 
 	return header.AsBytes()
