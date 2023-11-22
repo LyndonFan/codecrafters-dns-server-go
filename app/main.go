@@ -77,6 +77,7 @@ func (q Question) AsBytes() []byte {
 		res = append(res, byte(len(label)))
 		res = append(res, []byte(label)...)
 	}
+	res = append(res, byte(0))
 	res = append(res, byte(q.Type>>8))
 	res = append(res, byte(q.Type&0xff))
 	res = append(res, byte(q.Class>>8))
@@ -103,6 +104,7 @@ func (a Answer) AsBytes() []byte {
 		res = append(res, byte(len(label)))
 		res = append(res, []byte(label)...)
 	}
+	res = append(res, byte(0))
 	res = append(res, byte(a.Type>>8))
 	res = append(res, byte(a.Type&0xff))
 	res = append(res, byte(a.Class>>8))
@@ -147,8 +149,6 @@ func main() {
 		receivedData := string(buf[:size])
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
-		response := []byte{}
-
 		questions := []Question{}
 		questions = append(questions, Question{
 			Name:  "codecrafters.io",
@@ -173,6 +173,7 @@ func main() {
 			AnswerRecordCount: uint16(len(answers)),
 		}
 
+		response := make([]byte, 0, 512)
 		response = append(response, header.AsBytes()...)
 		for _, question := range questions {
 			response = append(response, question.AsBytes()...)
