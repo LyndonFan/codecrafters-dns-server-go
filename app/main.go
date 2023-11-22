@@ -84,6 +84,45 @@ func (q Question) AsBytes() []byte {
 	return res
 }
 
+type Answer struct {
+	Name     string
+	Type     uint16
+	Class    uint16
+	TTL      uint32
+	RDLength uint16
+	RDData   []byte
+}
+
+func (a Answer) AsBytes() []byte {
+	if len(a.RDData) != int(a.RDLength) {
+		fmt.Printf("RDData length (%d) does not match RDLength (%d)\n", len(a.RDData), a.RDLength)
+	}
+	res := make([]byte, 0, 10)
+	labels := strings.Split(a.Name, ".")
+	for _, label := range labels {
+		res = append(res, byte(len(label)))
+		res = append(res, []byte(label)...)
+	}
+	res = append(res, byte(a.Type>>8))
+	res = append(res, byte(a.Type&0xff))
+	res = append(res, byte(a.Class>>8))
+	res = append(res, byte(a.Class&0xff))
+	for i := 24; i >= 0; i -= 8 {
+		res = append(res, byte((a.TTL>>i)&0xff))
+	}
+	revLengthBytes := make([]byte, 0, 2)
+	l := a.RDLength
+	for l > 0 {
+		revLengthBytes = append(revLengthBytes, byte(l&0xff))
+		l >>= 8
+	}
+	for i := len(revLengthBytes) - 1; i >= 0; i-- {
+		res = append(res, revLengthBytes[i])
+	}
+	res = append(res, a.RDData...)
+	return res
+}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -115,19 +154,38 @@ func main() {
 		receivedData := string(buf[:size])
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
-		// Create an empty response
 		response := []byte{}
+
 		questions := []Question{}
 		questions = append(questions, Question{
 			Name:  "codecrafters.io",
 			Type:  1,
 			Class: 1,
 		})
-		header := calculateHeaders(len(questions))
 
-		response = append(response, header...)
+		answers := []Answer{}
+		answers = append(answers, Answer{
+			Name:     "codecrafters.io",
+			Type:     1,
+			Class:    1,
+			TTL:      3600,
+			RDLength: 4,
+			RDData:   []byte{0x08, 0x08, 0x08, 0x08},
+		})
+
+		header := Header{
+			Identifier:        1234,
+			QR:                true,
+			QuestionCount:     uint16(len(questions)),
+			AnswerRecordCount: uint16(len(answers)),
+		}
+
+		response = append(response, header.AsBytes()...)
 		for _, question := range questions {
 			response = append(response, question.AsBytes()...)
+		}
+		for _, answer := range answers {
+			response = append(response, answer.AsBytes()...)
 		}
 
 		_, err = udpConn.WriteToUDP(response, source)
@@ -138,44 +196,6 @@ func main() {
 }
 
 func calculateHeaders(questionLength int) []byte {
-	header := Header{
-		Identifier:    1234,
-		QR:            true,
-		QuestionCount: uint16(questionLength),
-	}
 
 	return header.AsBytes()
-
-	// header := make([]byte, 0, 12)
-	// identifier := 1234
-	// header = append(header, byte(identifier>>8), byte(identifier&0xff)) // 1234 = 0x04d2
-
-	// qrIndicator := 1
-	// oopCode := 0
-	// authoritativeAnswer := 0
-	// truncation := 0
-	// recursionDesired := 0
-	// val := (qrIndicator << 7) | (oopCode << 3)
-	// val = val | (authoritativeAnswer << 2) | (truncation << 1) | recursionDesired
-	// header = append(header, byte(val))
-
-	// recursionAvailable := 0
-	// reserved := 0
-	// responseCode := 0
-	// val = (recursionAvailable << 7) | (reserved << 4) | responseCode
-	// header = append(header, byte(val))
-
-	// questionCount := 0
-	// header = append(header, byte(questionCount>>8), byte(questionCount&0xff))
-
-	// answerRecordCount := 0
-	// header = append(header, byte(answerRecordCount>>8), byte(answerRecordCount&0xff))
-
-	// authorityRecordCount := 0
-	// header = append(header, byte(authorityRecordCount>>8), byte(authorityRecordCount&0xff))
-
-	// additionalRecordCount := 0
-	// header = append(header, byte(additionalRecordCount>>8), byte(additionalRecordCount&0xff))
-
-	// return header
 }
