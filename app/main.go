@@ -33,32 +33,42 @@ func main() {
 		receivedData := string(buf[:size])
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
-		questions := []Question{}
-		questions = append(questions, Question{
-			Name:  "codecrafters.io",
-			Type:  1,
-			Class: 1,
-		})
-
-		answers := []Answer{}
-		answers = append(answers, Answer{
-			Name:     "codecrafters.io",
-			Type:     1,
-			Class:    1,
-			TTL:      60,
-			RDLength: 4,
-			RDData:   []byte{0x08, 0x08, 0x08, 0x08},
-		})
-
 		payloadHeader := HeaderFromBytes(buf[:12])
 		fmt.Println(payloadHeader)
+
+		payloadQuestions := make([]Question, payloadHeader.QuestionCount)
+		questionStartIndex := 12
+		for i := 0; i < int(payloadHeader.QuestionCount); i++ {
+			payloadQuestions[i], questionStartIndex = QuestionFromBytes(buf[questionStartIndex:])
+		}
+
+		responseQuestions := make([]Question, len(payloadQuestions))
+		for i, q := range payloadQuestions {
+			responseQuestions[i] = Question{
+				Name:  q.Name,
+				Type:  1,
+				Class: 1,
+			}
+		}
+
+		answers := make([]Answer, len(payloadQuestions))
+		for i, q := range payloadQuestions {
+			answers[i] = Answer{
+				Name:     q.Name,
+				Type:     1,
+				Class:    1,
+				TTL:      60,
+				RDLength: 4,
+				RDData:   []byte{0x08, 0x08, 0x08, 0x08},
+			}
+		}
 
 		header := Header{
 			Identifier:        payloadHeader.Identifier,
 			QR:                true,
 			OpCode:            payloadHeader.OpCode,
 			RecursionDesired:  payloadHeader.RecursionDesired,
-			QuestionCount:     uint16(len(questions)),
+			QuestionCount:     uint16(len(responseQuestions)),
 			AnswerRecordCount: uint16(len(answers)),
 		}
 		if payloadHeader.OpCode == 0x00 {
@@ -69,7 +79,7 @@ func main() {
 
 		response := make([]byte, 0, 512)
 		response = append(response, header.AsBytes()...)
-		for _, question := range questions {
+		for _, question := range responseQuestions {
 			response = append(response, question.AsBytes()...)
 		}
 		for _, answer := range answers {

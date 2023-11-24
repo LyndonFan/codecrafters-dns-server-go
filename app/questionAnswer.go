@@ -43,6 +43,7 @@ func QuestionFromBytes(data []byte) (Question, int) {
 	q.Name = string(nameBytes)
 	q.Type = uint16(data[i])<<8 | uint16(data[i+1])
 	q.Class = uint16(data[i+2])<<8 | uint16(data[i+3])
+	return q, i + 4
 }
 
 type Answer struct {
