@@ -39,7 +39,7 @@ func main() {
 		payloadQuestions := make([]Question, payloadHeader.QuestionCount)
 		qStartIndex := 12
 		for i := 0; i < int(payloadHeader.QuestionCount); i++ {
-			payloadQuestions[i], qStartIndex = QuestionFromBytes(buf[qStartIndex:], qStartIndex)
+			payloadQuestions[i], qStartIndex = QuestionFromBytes(buf, qStartIndex)
 		}
 
 		responseQuestions := make([]Question, len(payloadQuestions))
