@@ -50,8 +50,8 @@ func main() {
 			RDData:   []byte{0x08, 0x08, 0x08, 0x08},
 		})
 
-		payloadHeader := Header{}
-		payloadHeader.FromBytes(buf[:12])
+		payloadHeader := HeaderFromBytes(buf[:12])
+		fmt.Println(payloadHeader)
 
 		header := Header{
 			Identifier:        payloadHeader.Identifier,

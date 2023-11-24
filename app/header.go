@@ -56,7 +56,8 @@ func (h Header) AsBytes() []byte {
 	return res
 }
 
-func (h *Header) FromBytes(data []byte) {
+func HeaderFromBytes(data []byte) Header {
+	h := Header{}
 	h.Identifier = uint16(data[0])<<8 | uint16(data[1])
 	h.QR = data[2]&(1<<7) != 0
 	h.OpCode = uint8(data[2]>>3) & 0x07
@@ -69,5 +70,5 @@ func (h *Header) FromBytes(data []byte) {
 	h.AnswerRecordCount = uint16(data[6])<<8 | uint16(data[7])
 	h.AuthorityRecordCount = uint16(data[8])<<8 | uint16(data[9])
 	h.AdditionalRecordCount = uint16(data[10])<<8 | uint16(data[11])
-	return
+	return h
 }
