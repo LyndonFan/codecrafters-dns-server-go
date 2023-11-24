@@ -26,20 +26,16 @@ func (q Question) AsBytes() []byte {
 	return res
 }
 
-func GetNameBytes(data []byte, startIndex int) (string, int) {
+func GetName(data []byte, startIndex int) (string, int) {
 	if data[startIndex] == 0 {
-		return "", startIndex
+		return "", startIndex + 1
 	}
 	nameBytes := make([]byte, 0, len(data)-4)
 	i := startIndex
-	for i < len(data)-4 {
-		if data[i] == 0x00 {
-			i += 1
-			break
-		}
-		if data[i]&0xC0 == 0xC0 {
+	for i <= len(data)-4 {
+		if data[i] >= 0xC0 {
 			pointerIndex := int(data[i]&0x3F)<<8 | int(data[i+1])
-			suffixName, _ := GetNameBytes(data, pointerIndex)
+			suffixName, _ := GetName(data, pointerIndex)
 			nameBytes = append(nameBytes, []byte(suffixName)...)
 			nameBytes = append(nameBytes, byte('.'))
 			i += 2
@@ -48,6 +44,9 @@ func GetNameBytes(data []byte, startIndex int) (string, int) {
 		length := int(data[i])
 		nameBytes = append(nameBytes, data[i+1:i+1+length]...)
 		i += 1 + length
+		if length == 0 {
+			break
+		}
 		nameBytes = append(nameBytes, byte('.'))
 	}
 	nameBytes = nameBytes[:len(nameBytes)-1]
@@ -57,7 +56,7 @@ func GetNameBytes(data []byte, startIndex int) (string, int) {
 func QuestionFromBytes(data []byte, startIndex int) (Question, int) {
 	q := Question{}
 	i := startIndex
-	q.Name, i = GetNameBytes(data, i)
+	q.Name, i = GetName(data, i)
 	q.Type = uint16(data[i])<<8 | uint16(data[i+1])
 	q.Class = uint16(data[i+2])<<8 | uint16(data[i+3])
 	return q, i + 4
