@@ -33,17 +33,16 @@ func GetNameBytes(data []byte, startIndex int) (string, int) {
 	nameBytes := make([]byte, 0, len(data)-4)
 	i := startIndex
 	for i < len(data)-4 {
-		if data[i] == 0 {
+		if data[i] == 0x00 {
 			i += 1
 			break
 		}
-		if data[i] == 0xff {
-			i += 1
-			pointerIndex := int(data[i])
+		if data[i]&0xC0 == 0xC0 {
+			pointerIndex := int(data[i]&0x3F)<<8 | int(data[i+1])
 			suffixName, _ := GetNameBytes(data, pointerIndex)
 			nameBytes = append(nameBytes, []byte(suffixName)...)
 			nameBytes = append(nameBytes, byte('.'))
-			i += 1
+			i += 2
 			break
 		}
 		length := int(data[i])
