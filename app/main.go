@@ -3,10 +3,25 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
+	"regexp"
 )
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
+
+	calledArgs := os.Args
+	if len(calledArgs) != 3 {
+		fmt.Println("Usage: --resolver <ip>:<port>")
+		return
+	}
+
+	address := calledArgs[2]
+	IP_PATTERN := regexp.MustCompile(`^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}$`)
+	if !IP_PATTERN.MatchString(address) {
+		fmt.Println("Invalid IP address:", address)
+		return
+	}
 
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
@@ -33,17 +48,10 @@ func main() {
 		receivedData := string(buf[:size])
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
-		payloadHeader := HeaderFromBytes(buf[:12])
-		fmt.Println(payloadHeader)
+		receivedPacket := PacketFromBytes(buf[:size])
 
-		payloadQuestions := make([]Question, payloadHeader.QuestionCount)
-		qStartIndex := 12
-		for i := 0; i < int(payloadHeader.QuestionCount); i++ {
-			payloadQuestions[i], qStartIndex = QuestionFromBytes(buf, qStartIndex)
-		}
-
-		responseQuestions := make([]Question, len(payloadQuestions))
-		for i, q := range payloadQuestions {
+		responseQuestions := make([]Question, len(receivedPacket.Questions))
+		for i, q := range receivedPacket.Questions {
 			responseQuestions[i] = Question{
 				Name:  q.Name,
 				Type:  1,
@@ -52,8 +60,8 @@ func main() {
 			fmt.Printf("Question %d: %s\n", i, q.Name)
 		}
 
-		answers := make([]Answer, len(payloadQuestions))
-		for i, q := range payloadQuestions {
+		answers := make([]Answer, len(receivedPacket.Questions))
+		for i, q := range receivedPacket.Questions {
 			answers[i] = Answer{
 				Name:     q.Name,
 				Type:     1,
@@ -65,14 +73,14 @@ func main() {
 		}
 
 		header := Header{
-			Identifier:        payloadHeader.Identifier,
+			Identifier:        receivedPacket.Header.Identifier,
 			QR:                true,
-			OpCode:            payloadHeader.OpCode,
-			RecursionDesired:  payloadHeader.RecursionDesired,
+			OpCode:            receivedPacket.Header.OpCode,
+			RecursionDesired:  receivedPacket.Header.RecursionDesired,
 			QuestionCount:     uint16(len(responseQuestions)),
 			AnswerRecordCount: uint16(len(answers)),
 		}
-		if payloadHeader.OpCode == 0x00 {
+		if receivedPacket.Header.OpCode == 0x00 {
 			header.ResponseCode = 0x00
 		} else {
 			header.ResponseCode = 0x04
