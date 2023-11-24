@@ -49,6 +49,7 @@ func main() {
 				Type:  1,
 				Class: 1,
 			}
+			fmt.Printf("Question %d: %s\n", i, q.Name)
 		}
 
 		answers := make([]Answer, len(payloadQuestions))
