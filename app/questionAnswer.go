@@ -26,21 +26,39 @@ func (q Question) AsBytes() []byte {
 	return res
 }
 
-func QuestionFromBytes(data []byte) (Question, int) {
-	q := Question{}
+func GetNameBytes(data []byte, startIndex int) (string, int) {
+	if data[startIndex] == 0 {
+		return "", startIndex
+	}
 	nameBytes := make([]byte, 0, len(data)-4)
-	i := 0
+	i := startIndex
 	for i < len(data)-4 {
-		length := int(data[i])
-		if length == 0 {
+		if data[i] == 0 {
+			i += 1
 			break
 		}
+		if data[i] == 0xff {
+			i += 1
+			pointerIndex := int(data[i])
+			suffixName, _ := GetNameBytes(data, pointerIndex)
+			nameBytes = append(nameBytes, []byte(suffixName)...)
+			nameBytes = append(nameBytes, byte('.'))
+			i += 1
+			break
+		}
+		length := int(data[i])
 		nameBytes = append(nameBytes, data[i+1:i+1+length]...)
 		i += 1 + length
 		nameBytes = append(nameBytes, byte('.'))
 	}
 	nameBytes = nameBytes[:len(nameBytes)-1]
-	q.Name = string(nameBytes)
+	return string(nameBytes), i
+}
+
+func QuestionFromBytes(data []byte, startIndex int) (Question, int) {
+	q := Question{}
+	i := startIndex
+	q.Name, i = GetNameBytes(data, i)
 	q.Type = uint16(data[i])<<8 | uint16(data[i+1])
 	q.Class = uint16(data[i+2])<<8 | uint16(data[i+3])
 	return q, i + 4
