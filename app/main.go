@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"regexp"
 )
 
 func main() {
@@ -17,9 +16,9 @@ func main() {
 	}
 
 	address := calledArgs[2]
-	IP_PATTERN := regexp.MustCompile(`^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}$`)
-	if !IP_PATTERN.MatchString(address) {
-		fmt.Println("Invalid IP address:", address)
+	resolverAddress, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		fmt.Printf("Failed to resolve address %s: %v", address, err)
 		return
 	}
 
@@ -50,15 +49,7 @@ func main() {
 
 		receivedPacket := PacketFromBytes(buf[:size])
 
-		responseQuestions := make([]Question, len(receivedPacket.Questions))
-		for i, q := range receivedPacket.Questions {
-			responseQuestions[i] = Question{
-				Name:  q.Name,
-				Type:  1,
-				Class: 1,
-			}
-			fmt.Printf("Question %d: %s\n", i, q.Name)
-		}
+		responseQuestions := receivedPacket.Questions
 
 		answers := make([]Answer, len(receivedPacket.Questions))
 		for i, q := range receivedPacket.Questions {
@@ -72,28 +63,15 @@ func main() {
 			}
 		}
 
-		header := Header{
-			Identifier:        receivedPacket.Header.Identifier,
-			QR:                true,
-			OpCode:            receivedPacket.Header.OpCode,
-			RecursionDesired:  receivedPacket.Header.RecursionDesired,
-			QuestionCount:     uint16(len(responseQuestions)),
-			AnswerRecordCount: uint16(len(answers)),
-		}
+		responsePacket := PacketFromQAs(responseQuestions, answers)
+		responsePacket.Header.Identifier = receivedPacket.Header.Identifier
 		if receivedPacket.Header.OpCode == 0x00 {
-			header.ResponseCode = 0x00
+			responsePacket.Header.ResponseCode = 0x00
 		} else {
-			header.ResponseCode = 0x04
+			responsePacket.Header.ResponseCode = 0x04
 		}
 
-		response := make([]byte, 0, 512)
-		response = append(response, header.AsBytes()...)
-		for _, question := range responseQuestions {
-			response = append(response, question.AsBytes()...)
-		}
-		for _, answer := range answers {
-			response = append(response, answer.AsBytes()...)
-		}
+		response := responsePacket.AsBytes()
 
 		_, err = udpConn.WriteToUDP(response, source)
 		if err != nil {
