@@ -28,14 +28,14 @@ func main() {
 		return
 	}
 
-	udpConn, err := net.DialUDP("udp", nil, udpAddr)
+	udpConn, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		fmt.Println("Failed to bind to address:", err)
 		return
 	}
 	defer udpConn.Close()
 
-	resolverConn, err := net.ListenUDP("udp", resolverAddress)
+	resolverConn, err := net.DialUDP("udp", nil, resolverAddress)
 	if err != nil {
 		fmt.Println("Failed to bind to resolver address:", err)
 		return
