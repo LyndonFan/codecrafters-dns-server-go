@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 
-	udpConn, err := net.ListenUDP("udp", udpAddr)
+	udpConn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
 		fmt.Println("Failed to bind to address:", err)
 		return
