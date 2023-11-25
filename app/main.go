@@ -35,19 +35,12 @@ func main() {
 	}
 	defer udpConn.Close()
 
-	resolverWriteConn, err := net.Dial("udp", address)
-	if err != nil {
-		fmt.Println("Failed to connect to resolver:", err)
-		return
-	}
-	defer resolverWriteConn.Close()
-
-	resolverReadConn, err := net.ListenUDP("udp", resolverAddress)
+	resolverConn, err := net.ListenUDP("udp", resolverAddress)
 	if err != nil {
 		fmt.Println("Failed to bind to resolver address:", err)
 		return
 	}
-	defer resolverReadConn.Close()
+	defer resolverConn.Close()
 
 	buf := make([]byte, 512)
 
@@ -70,12 +63,12 @@ func main() {
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
 			intermediatePacket.Header.Identifier = uint16(i)
 			responsebuf := make([]byte, 512)
-			_, err = resolverWriteConn.Write(intermediatePacket.AsBytes())
+			_, err = resolverConn.Write(intermediatePacket.AsBytes())
 			if err != nil {
 				fmt.Println("Failed to send intermediate request:", err)
 				break
 			}
-			intermediateSize, _, err := resolverReadConn.ReadFromUDP(responsebuf)
+			intermediateSize, _, err := resolverConn.ReadFromUDP(responsebuf)
 			if err != nil {
 				fmt.Println("Failed to receive intermediate response:", err)
 				break
