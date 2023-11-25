@@ -64,6 +64,7 @@ func main() {
 		responseChannel := make(chan RequestResult, len(receivedPacket.Questions))
 		wg := &sync.WaitGroup{}
 		for i, q := range receivedPacket.Questions {
+			wg.Add(1)
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
 			go sendRequest(i, resolverConn, intermediatePacket.AsBytes(), responseChannel, wg)
 		}
