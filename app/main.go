@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 )
 
 func main() {
@@ -57,24 +58,20 @@ func main() {
 		receivedPacket := PacketFromBytes(buf[:size])
 
 		responseQuestions := receivedPacket.Questions
+		fmt.Printf("Received %d questions\n", len(responseQuestions))
 
 		answers := make([]Answer, len(receivedPacket.Questions))
+		responseChannel := make(chan RequestResult, len(receivedPacket.Questions))
+		wg := &sync.WaitGroup{}
 		for i, q := range receivedPacket.Questions {
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
-			intermediatePacket.Header.Identifier = uint16(i)
-			responsebuf := make([]byte, 512)
-			_, err = resolverConn.Write(intermediatePacket.AsBytes())
-			if err != nil {
-				fmt.Println("Failed to send intermediate request:", err)
-				break
-			}
-			intermediateSize, _, err := resolverConn.ReadFromUDP(responsebuf)
-			if err != nil {
-				fmt.Println("Failed to receive intermediate response:", err)
-				break
-			}
-			intermediateResponse := PacketFromBytes(responsebuf[:intermediateSize])
-			answers[i] = intermediateResponse.Answers[0]
+			go sendRequest(i, resolverConn, intermediatePacket.AsBytes(), responseChannel, wg)
+		}
+		wg.Wait()
+
+		for i := 0; i < len(receivedPacket.Questions); i++ {
+			requestResult := <-responseChannel
+			answers[requestResult.Index] = requestResult.Answer
 		}
 
 		responsePacket := PacketFromQAs(responseQuestions, answers)
@@ -92,4 +89,35 @@ func main() {
 			fmt.Println("Failed to send response:", err)
 		}
 	}
+}
+
+type RequestResult struct {
+	Index  int
+	Answer Answer
+}
+
+func sendRequest(
+	index int,
+	resolverConn *net.UDPConn,
+	buf []byte,
+	responseChannel chan (RequestResult),
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+
+	_, err := resolverConn.Write(buf)
+	if err != nil {
+		fmt.Println("Failed to send request:", err)
+		return
+	}
+
+	responseBuf := make([]byte, 512)
+	responseSize, _, err := resolverConn.ReadFromUDP(responseBuf)
+	if err != nil {
+		fmt.Println("Failed to receive response:", err)
+		return
+	}
+
+	responsePacket := PacketFromBytes(responseBuf[:responseSize])
+	responseChannel <- RequestResult{index, responsePacket.Answers[0]}
 }
