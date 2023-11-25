@@ -21,6 +21,12 @@ func main() {
 		fmt.Printf("Failed to resolve address %s: %v", address, err)
 		return
 	}
+	resolverConn, err := net.ListenUDP("udp", resolverAddress)
+	if err != nil {
+		fmt.Printf("Failed to bind to address %s: %v", address, err)
+		return
+	}
+	defer resolverConn.Close()
 
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
@@ -53,14 +59,21 @@ func main() {
 
 		answers := make([]Answer, len(receivedPacket.Questions))
 		for i, q := range receivedPacket.Questions {
-			answers[i] = Answer{
-				Name:     q.Name,
-				Type:     1,
-				Class:    1,
-				TTL:      60,
-				RDLength: 4,
-				RDData:   []byte{0x08, 0x08, 0x08, 0x08},
+			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
+			intermediatePacket.Header.Identifier = uint16(i)
+			_, err = udpConn.WriteToUDP(intermediatePacket.AsBytes(), resolverAddress)
+			if err != nil {
+				fmt.Println("Failed to send intermediate packet:", err)
+				break
 			}
+			responsebuf := make([]byte, 512)
+			intermediateSize, _, err := resolverConn.ReadFromUDP(responsebuf)
+			if err != nil {
+				fmt.Println("Failed to receive intermediate response:", err)
+				break
+			}
+			intermediateResponse := PacketFromBytes(responsebuf[:intermediateSize])
+			answers[i] = intermediateResponse.Answers[0]
 		}
 
 		responsePacket := PacketFromQAs(responseQuestions, answers)
