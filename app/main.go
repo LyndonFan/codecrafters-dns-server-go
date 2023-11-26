@@ -76,6 +76,7 @@ func main() {
 		if packet.Header.OpCode != 0x00 {
 			packet.Header.ResponseCode = 0x04
 		}
+		packet.Header.QR = true
 
 		response := packet.AsBytes()
 
