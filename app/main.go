@@ -56,6 +56,7 @@ func main() {
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
 		receivedPacket := PacketFromBytes(buf[:size])
+		fmt.Printf("Received packet:\n%v\n", receivedPacket)
 
 		responseQuestions := receivedPacket.Questions
 		fmt.Printf("Received %d questions\n", len(responseQuestions))
@@ -66,6 +67,7 @@ func main() {
 		for i, q := range receivedPacket.Questions {
 			wg.Add(1)
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
+			fmt.Printf("Sending packet %d:\n%v\n", i, intermediatePacket)
 			go sendRequest(i, resolverConn, intermediatePacket.AsBytes(), responseChannel, wg)
 		}
 		wg.Wait()
@@ -74,6 +76,7 @@ func main() {
 			requestResult := <-responseChannel
 			answers[requestResult.Index] = requestResult.Answer
 		}
+		close(responseChannel)
 
 		responsePacket := PacketFromQAs(responseQuestions, answers)
 		responsePacket.Header.Identifier = receivedPacket.Header.Identifier
@@ -111,6 +114,7 @@ func sendRequest(
 		fmt.Println("Failed to send request:", err)
 		return
 	}
+	fmt.Printf("Sent question %d of %d bytes to resolver\n", index, len(buf))
 
 	responseBuf := make([]byte, 512)
 	responseSize, _, err := resolverConn.ReadFromUDP(responseBuf)
