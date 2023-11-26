@@ -21,7 +21,6 @@ func main() {
 		fmt.Printf("Failed to resolve address %s: %v", address, err)
 		return
 	}
-	fmt.Printf("Resolved address %s to %s\n", address, resolverAddress.String())
 
 	resolverConn, err := net.DialUDP("udp", nil, resolverAddress)
 	if err != nil {
@@ -53,14 +52,13 @@ func main() {
 			break
 		}
 
-		receivedData := string(buf[:size])
-		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
+		fmt.Printf("Received %d bytes from %s\n", size, source)
 
 		receivedPacket := PacketFromBytes(buf[:size])
 		fmt.Printf("Received packet:\n%v\n", receivedPacket)
 
 		responseQuestions := receivedPacket.Questions
-		fmt.Printf("Received %d questions\n", len(responseQuestions))
+		fmt.Printf("Received %d question(s)\n", len(responseQuestions))
 
 		answers := make([]Answer, len(receivedPacket.Questions))
 		for i, q := range receivedPacket.Questions {
@@ -99,12 +97,13 @@ func sendRequest(
 	packet *Packet,
 ) (*Packet, error) {
 	bytes := packet.AsBytes()
-	_, err := resolverConn.Write(bytes)
+	nBytes, err := resolverConn.Write(bytes)
 	if err != nil {
 		fmt.Println("Failed to send request:", err)
 		return nil, err
 	}
 	fmt.Printf("Sent packet %d bytes to resolver\n", len(bytes))
+	fmt.Printf("Sent %d bytes written\n", nBytes)
 
 	responseBuf := make([]byte, 512)
 	responseSize, _, err := resolverConn.ReadFromUDP(responseBuf)
