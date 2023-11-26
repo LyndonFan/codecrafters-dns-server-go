@@ -23,6 +23,13 @@ func main() {
 	}
 	fmt.Printf("Resolved address %s to %s\n", address, resolverAddress.String())
 
+	resolverConn, err := net.DialUDP("udp", nil, resolverAddress)
+	if err != nil {
+		fmt.Println("Failed to bind to resolver address:", err)
+		return
+	}
+	defer resolverConn.Close()
+
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
 		fmt.Println("Failed to resolve UDP address:", err)
@@ -35,13 +42,6 @@ func main() {
 		return
 	}
 	defer udpConn.Close()
-
-	resolverConn, err := net.DialUDP("udp", nil, resolverAddress)
-	if err != nil {
-		fmt.Println("Failed to bind to resolver address:", err)
-		return
-	}
-	defer resolverConn.Close()
 
 	buf := make([]byte, 512)
 
@@ -66,7 +66,7 @@ func main() {
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
 			fmt.Printf("Created intermediate packet %d:\n%v\n", i, intermediatePacket)
 
-			intermediateResponse, err := sendRequest(resolverConn, &intermediatePacket)
+			intermediateResponse, err := sendRequest(udpConn, resolverConn, &intermediatePacket)
 			if err != nil {
 				fmt.Println("Failed to send intermediate request:", err)
 				continue
@@ -97,11 +97,12 @@ type RequestResult struct {
 }
 
 func sendRequest(
+	udpConn *net.UDPConn,
 	resolverConn *net.UDPConn,
 	packet *Packet,
 ) (*Packet, error) {
 	bytes := packet.AsBytes()
-	_, err := resolverConn.Write(bytes)
+	_, err := udpConn.WriteTo(bytes, resolverConn.LocalAddr())
 	if err != nil {
 		fmt.Println("Failed to send request:", err)
 		return nil, err
