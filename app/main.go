@@ -54,20 +54,16 @@ func main() {
 
 		fmt.Printf("Received %d bytes from %s\n", size, source)
 
-		receivedPacket := PacketFromBytes(buf[:size])
-		fmt.Printf("Received packet:\n%v\n", receivedPacket)
+		packet := PacketFromBytes(buf[:size])
+		fmt.Printf("Received packet:\n%v\n", packet)
 
-		responseQuestions := receivedPacket.Questions
-		fmt.Printf("Received %d question(s)\n", len(responseQuestions))
+		receivedQuestions := packet.Questions
+		fmt.Printf("Received %d question(s)\n", len(receivedQuestions))
 
-		answers := make([]Answer, len(receivedPacket.Questions))
-		for i, q := range receivedPacket.Questions {
-			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
-			fmt.Printf("Created intermediate packet %d:\n%v\n", i, intermediatePacket)
-			fmt.Println("no of questions in intermediate packet", len(intermediatePacket.Questions))
-			fmt.Println("intermediate packet questioncount", intermediatePacket.Header.QuestionCount)
-
-			intermediateResponse, err := sendRequest(resolverConn, &intermediatePacket)
+		answers := make([]Answer, len(packet.Questions))
+		for i, q := range packet.Questions {
+			packet.Questions = []Question{q}
+			intermediateResponse, err := sendRequest(resolverConn, &packet)
 			if err != nil {
 				fmt.Println("Failed to send intermediate request:", err)
 				continue
@@ -75,15 +71,13 @@ func main() {
 			answers[i] = intermediateResponse.Answers[0]
 		}
 
-		responsePacket := PacketFromQAs(responseQuestions, answers)
-		responsePacket.Header.Identifier = receivedPacket.Header.Identifier
-		if receivedPacket.Header.OpCode == 0x00 {
-			responsePacket.Header.ResponseCode = 0x00
-		} else {
-			responsePacket.Header.ResponseCode = 0x04
+		packet.Questions = receivedQuestions
+		packet.Answers = answers
+		if packet.Header.OpCode != 0x00 {
+			packet.Header.ResponseCode = 0x04
 		}
 
-		response := responsePacket.AsBytes()
+		response := packet.AsBytes()
 
 		_, err = udpConn.WriteToUDP(response, source)
 		if err != nil {
