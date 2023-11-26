@@ -66,7 +66,7 @@ func main() {
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
 			fmt.Printf("Created intermediate packet %d:\n%v\n", i, intermediatePacket)
 
-			intermediateResponse, err := sendRequest(udpConn, resolverConn, &intermediatePacket)
+			intermediateResponse, err := sendRequest(resolverConn, &intermediatePacket)
 			if err != nil {
 				fmt.Println("Failed to send intermediate request:", err)
 				continue
@@ -91,18 +91,12 @@ func main() {
 	}
 }
 
-type RequestResult struct {
-	Index  int
-	Answer Answer
-}
-
 func sendRequest(
-	udpConn *net.UDPConn,
 	resolverConn *net.UDPConn,
 	packet *Packet,
 ) (*Packet, error) {
 	bytes := packet.AsBytes()
-	_, err := udpConn.WriteTo(bytes, resolverConn.LocalAddr())
+	_, err := resolverConn.Write(bytes)
 	if err != nil {
 		fmt.Println("Failed to send request:", err)
 		return nil, err
