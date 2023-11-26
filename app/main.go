@@ -66,6 +66,8 @@ func main() {
 		for i, q := range receivedPacket.Questions {
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
 			fmt.Printf("Created intermediate packet %d:\n%v\n", i, intermediatePacket)
+			fmt.Println("no of questions in intermediate packet", len(intermediatePacket.Questions))
+			fmt.Println("intermediate packet questioncount", intermediatePacket.Header.QuestionCount)
 
 			intermediateResponse, err := sendRequest(resolverConn, &intermediatePacket)
 			if err != nil {
