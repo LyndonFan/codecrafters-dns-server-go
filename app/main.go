@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"sync"
 )
 
 func main() {
@@ -22,6 +21,7 @@ func main() {
 		fmt.Printf("Failed to resolve address %s: %v", address, err)
 		return
 	}
+	fmt.Printf("Resolved address %s to %s\n", address, resolverAddress.String())
 
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
@@ -62,21 +62,17 @@ func main() {
 		fmt.Printf("Received %d questions\n", len(responseQuestions))
 
 		answers := make([]Answer, len(receivedPacket.Questions))
-		responseChannel := make(chan RequestResult, len(receivedPacket.Questions))
-		wg := &sync.WaitGroup{}
 		for i, q := range receivedPacket.Questions {
-			wg.Add(1)
 			intermediatePacket := PacketFromQAs([]Question{q}, []Answer{})
-			fmt.Printf("Sending packet %d:\n%v\n", i, intermediatePacket)
-			go sendRequest(i, resolverConn, intermediatePacket.AsBytes(), responseChannel, wg)
-		}
-		wg.Wait()
+			fmt.Printf("Created intermediate packet %d:\n%v\n", i, intermediatePacket)
 
-		for i := 0; i < len(receivedPacket.Questions); i++ {
-			requestResult := <-responseChannel
-			answers[requestResult.Index] = requestResult.Answer
+			intermediateResponse, err := sendRequest(resolverConn, &intermediatePacket)
+			if err != nil {
+				fmt.Println("Failed to send intermediate request:", err)
+				continue
+			}
+			answers[i] = intermediateResponse.Answers[0]
 		}
-		close(responseChannel)
 
 		responsePacket := PacketFromQAs(responseQuestions, answers)
 		responsePacket.Header.Identifier = receivedPacket.Header.Identifier
@@ -101,28 +97,25 @@ type RequestResult struct {
 }
 
 func sendRequest(
-	index int,
 	resolverConn *net.UDPConn,
-	buf []byte,
-	responseChannel chan (RequestResult),
-	wg *sync.WaitGroup,
-) {
-	defer wg.Done()
-
-	_, err := resolverConn.Write(buf)
+	packet *Packet,
+) (*Packet, error) {
+	bytes := packet.AsBytes()
+	_, err := resolverConn.Write(bytes)
 	if err != nil {
 		fmt.Println("Failed to send request:", err)
-		return
+		return nil, err
 	}
-	fmt.Printf("Sent question %d of %d bytes to resolver\n", index, len(buf))
+	fmt.Printf("Sent packet %d bytes to resolver\n", len(bytes))
 
 	responseBuf := make([]byte, 512)
 	responseSize, _, err := resolverConn.ReadFromUDP(responseBuf)
 	if err != nil {
 		fmt.Println("Failed to receive response:", err)
-		return
+		return nil, err
 	}
+	fmt.Printf("Received %d bytes from resolver\n", responseSize)
 
 	responsePacket := PacketFromBytes(responseBuf[:responseSize])
-	responseChannel <- RequestResult{index, responsePacket.Answers[0]}
+	return &responsePacket, nil
 }
