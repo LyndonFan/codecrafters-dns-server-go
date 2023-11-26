@@ -23,7 +23,7 @@ func main() {
 	}
 	fmt.Printf("Resolved address %s to %s\n", address, resolverAddress.String())
 
-	resolverConn, err := net.DialUDP("udp", resolverAddress, resolverAddress)
+	resolverConn, err := net.Dial("udp", resolverAddress.String())
 	if err != nil {
 		fmt.Println("Failed to bind to resolver address:", err)
 		return
