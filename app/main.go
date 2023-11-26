@@ -29,6 +29,7 @@ func main() {
 		return
 	}
 	defer resolverConn.Close()
+	fmt.Println("resolverConn.LocalAddr()", resolverConn.LocalAddr())
 
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
