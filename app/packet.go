@@ -26,7 +26,7 @@ func PacketFromQAs(questions []Question, answers []Answer) Packet {
 	p.Questions = questions
 	p.Answers = answers
 	p.Header = Header{
-		QR:                true,
+		QR:                (len(answers) > 0),
 		OpCode:            0,
 		QuestionCount:     uint16(len(questions)),
 		AnswerRecordCount: uint16(len(answers)),
