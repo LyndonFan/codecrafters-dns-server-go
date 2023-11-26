@@ -21,19 +21,6 @@ func PacketFromBytes(data []byte) Packet {
 	return p
 }
 
-func PacketFromQAs(questions []Question, answers []Answer) Packet {
-	p := Packet{}
-	p.Questions = questions
-	p.Answers = answers
-	p.Header = Header{
-		QR:                (len(answers) > 0),
-		OpCode:            0,
-		QuestionCount:     uint16(len(questions)),
-		AnswerRecordCount: uint16(len(answers)),
-	}
-	return p
-}
-
 func (p Packet) AsBytes() []byte {
 	res := p.Header.AsBytes()
 	for _, question := range p.Questions {
