@@ -62,7 +62,7 @@ func main() {
 		if packet.Header.OpCode != 0x00 {
 			packet.Header.ResponseCode = 0x04
 		} else {
-			answers := make([]Answer, 0, len(packet.Questions))
+			answers := make([]Answer, len(packet.Questions))
 			packet.Header.QuestionCount = 1
 			for i, q := range packet.Questions {
 				packet.Questions = []Question{q}
