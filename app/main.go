@@ -55,10 +55,10 @@ func main() {
 		fmt.Printf("Received %d bytes from %s\n", size, source)
 
 		packet := PacketFromBytes(buf[:size])
-		fmt.Printf("Received packet:\n%v\n", packet)
+		fmt.Printf("Initial packet:\n%v\n", packet)
 
 		receivedQuestions := packet.Questions
-		fmt.Printf("Received %d question(s)\n", len(receivedQuestions))
+		fmt.Printf("Initially received %d question(s)\n", len(receivedQuestions))
 
 		answers := make([]Answer, len(packet.Questions))
 		for i, q := range packet.Questions {
@@ -110,6 +110,6 @@ func sendRequest(
 	fmt.Printf("Received %d bytes from resolver\n", responseSize)
 
 	responsePacket := PacketFromBytes(responseBuf[:responseSize])
-	fmt.Printf("Received packet:\n%v\n", responsePacket)
+	fmt.Printf("Received intermediate packet:\n%v\n", responsePacket)
 	return &responsePacket, nil
 }
