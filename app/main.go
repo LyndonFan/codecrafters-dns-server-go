@@ -28,7 +28,6 @@ func main() {
 		return
 	}
 	defer resolverConn.Close()
-	fmt.Println("resolverConn.LocalAddr()", resolverConn.LocalAddr())
 
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
@@ -60,23 +59,23 @@ func main() {
 		receivedQuestions := packet.Questions
 		fmt.Printf("Initially received %d question(s)\n", len(receivedQuestions))
 
-		answers := make([]Answer, len(packet.Questions))
-		for i, q := range packet.Questions {
-			packet.Questions = []Question{q}
-			intermediateResponse, err := sendRequest(resolverConn, &packet)
-			if err != nil {
-				fmt.Println("Failed to send intermediate request:", err)
-				continue
-			}
-			answers[i] = intermediateResponse.Answers[0]
-		}
-
-		packet.Questions = receivedQuestions
-		packet.Answers = answers
 		if packet.Header.OpCode != 0x00 {
 			packet.Header.ResponseCode = 0x04
+		} else {
+			answers := make([]Answer, len(packet.Questions))
+			for i, q := range packet.Questions {
+				packet.Questions = []Question{q}
+				intermediateResponse, err := sendRequest(resolverConn, &packet)
+				if err != nil {
+					fmt.Println("Failed to send intermediate request:", err)
+					continue
+				}
+				answers[i] = intermediateResponse.Answers[0]
+			}
+			packet.Questions = receivedQuestions
+			packet.Answers = answers
+			packet.Header.AnswerRecordCount = uint16(len(answers))
 		}
-		packet.Header.AnswerRecordCount = uint16(len(answers))
 		packet.Header.QR = true
 
 		response := packet.AsBytes()
