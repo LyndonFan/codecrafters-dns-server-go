@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Header struct {
 	Identifier            uint16
 	QR                    bool
@@ -71,4 +73,15 @@ func HeaderFromBytes(data []byte) Header {
 	h.AuthorityRecordCount = uint16(data[8])<<8 | uint16(data[9])
 	h.AdditionalRecordCount = uint16(data[10])<<8 | uint16(data[11])
 	return h
+}
+
+func (h Header) String() string {
+	return fmt.Sprintf(
+		"Header{id: %d, qr: %t, opcode: %d, question_count: %d, answer_count: %d}",
+		h.Identifier,
+		h.QR,
+		h.OpCode,
+		h.QuestionCount,
+		h.AnswerRecordCount,
+	)
 }

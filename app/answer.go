@@ -50,3 +50,14 @@ func AnswerFromBytes(data []byte, startIndex int) (Answer, int) {
 	copy(a.RDData, data[i+10:i+10+int(a.RDLength)])
 	return a, i + 10 + int(a.RDLength)
 }
+
+func (a Answer) String() string {
+	return fmt.Sprintf(
+		"Answer{name: %s, type: %d, class: %d, ttl: %d, rd_data: %v}",
+		a.Name,
+		a.Type,
+		a.Class,
+		a.TTL,
+		a.RDData,
+	)
+}

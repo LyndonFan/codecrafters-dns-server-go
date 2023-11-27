@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -59,4 +60,13 @@ func QuestionFromBytes(data []byte, startIndex int) (Question, int) {
 	q.Type = uint16(data[i])<<8 | uint16(data[i+1])
 	q.Class = uint16(data[i+2])<<8 | uint16(data[i+3])
 	return q, i + 4
+}
+
+func (q Question) String() string {
+	return fmt.Sprintf(
+		"Question{name: %s, type: %d, class: %d}",
+		q.Name,
+		q.Type,
+		q.Class,
+	)
 }

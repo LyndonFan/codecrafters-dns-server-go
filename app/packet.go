@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Packet struct {
 	Header    Header
 	Questions []Question
@@ -30,4 +32,13 @@ func (p Packet) AsBytes() []byte {
 		res = append(res, answer.AsBytes()...)
 	}
 	return res
+}
+
+func (p Packet) String() string {
+	return fmt.Sprintf(
+		"Packet{header: %s, questions: %v, answers: %v}",
+		p.Header,
+		p.Questions,
+		p.Answers,
+	)
 }
