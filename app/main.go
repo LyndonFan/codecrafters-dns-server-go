@@ -63,17 +63,17 @@ func main() {
 			packet.Header.ResponseCode = 0x04
 		} else {
 			answers := make([]Answer, 0, len(packet.Questions))
-			for _, q := range packet.Questions {
+			packet.Header.QuestionCount = 1
+			for i, q := range packet.Questions {
 				packet.Questions = []Question{q}
 				intermediateResponse, err := sendRequest(resolverConn, &packet)
 				if err != nil {
-					fmt.Println("Failed to send intermediate request:", err)
-					continue
+					fmt.Println("Failed to send request:", err)
+					break
 				}
-				if intermediateResponse.Header.AnswerRecordCount > 0 {
-					answers = append(answers, intermediateResponse.Answers...)
-				}
+				answers[i] = intermediateResponse.Answers[0]
 			}
+			packet.Header.QuestionCount = uint16(len(receivedQuestions))
 			packet.Questions = receivedQuestions
 			packet.Answers = answers
 			packet.Header.AnswerRecordCount = uint16(len(answers))
