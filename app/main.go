@@ -110,5 +110,6 @@ func sendRequest(
 	fmt.Printf("Received %d bytes from resolver\n", responseSize)
 
 	responsePacket := PacketFromBytes(responseBuf[:responseSize])
+	fmt.Printf("Received packet:\n%v\n", responsePacket)
 	return &responsePacket, nil
 }
